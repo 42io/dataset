@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include "fe.h"
@@ -27,63 +28,82 @@ typedef struct
 
 /*********************************************************************/
 
-static void read_wave_fd(FILE *fd, char* dest, size_t sz)
+typedef int16_t audio_sample_t;
+
+/*********************************************************************/
+
+#define RAW_CHUNK_SZ     (1600 * sizeof(audio_sample_t)) // 100ms
+#define RAW_RING_SZ      (2 * RAW_CHUNK_SZ)
+#define MFCC_FRAME_LEN   (13)
+
+/*********************************************************************/
+
+static bool read_block(void *ptr, size_t size, FILE *stream)
+{
+  return fread(ptr, size, 1, stream) == 1;
+}
+
+/*********************************************************************/
+
+static audio_sample_t* read_wave_fd(FILE *fd, size_t *sz)
 {
   wave_header_t header;
 
-  assert(fread(&header, 1, sizeof header, fd) == sizeof header);
+  assert(44 == sizeof header);
+  assert(read_block(&header, sizeof header, fd));
   assert(memcmp(header.chunk_id, "RIFF" /* little-endian */, sizeof header.chunk_id) == 0);
+  assert(header.chunk_size == 36 + header.datachunk_size);
   assert(memcmp(header.format, "WAVE", sizeof header.format) == 0);
+  assert(memcmp(header.fmtchunk_id, "fmt ", sizeof header.fmtchunk_id) == 0);
+  assert(header.fmtchunk_size == 16);
   assert(header.audio_format == 1);
   assert(header.num_channels == 1);
+  assert(header.byte_rate == 32000);
+  assert(header.block_align == 2);
   assert(header.sample_rate == 16000);
   assert(header.bits_per_sample == 16);
-  assert(header.datachunk_size == 32000);
-  assert(fread(dest, 1, sz, fd) == sz);
+  assert(memcmp(header.datachunk_id, "data", sizeof header.datachunk_id) == 0);
+  audio_sample_t *samples = malloc(header.datachunk_size);
+  assert(samples);
+  assert(read_block(samples, header.datachunk_size, fd));
   assert(fgetc(fd) == EOF);
+  *sz = header.datachunk_size;
 
-  // arecord -d 1 -f S16_LE -r 16000 | head -c44 | xxd -i
-  const unsigned char wav_44[] = {
-    0x52, 0x49, 0x46, 0x46, 0x24, 0x7d, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45,
-    0x66, 0x6d, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
-    0x80, 0x3e, 0x00, 0x00, 0x00, 0x7d, 0x00, 0x00, 0x02, 0x00, 0x10, 0x00,
-    0x64, 0x61, 0x74, 0x61, 0x00, 0x7d, 0x00, 0x00
-  };
-  assert(sizeof wav_44 == sizeof header);
-  assert(memcmp(wav_44, &header, sizeof header) == 0);
+  return samples;
 }
 
 /*********************************************************************/
 
-static void read_wave(const char* path, char* dest, size_t sz)
+static audio_sample_t* read_wave(const char *path, size_t *sz)
 {
-  FILE *fd = path && strcmp(path, "-") ? fopen(path, "r") : stdin;
+  FILE *fd = fopen(path, "r");
   assert(fd);
+  audio_sample_t *samples = read_wave_fd(fd, sz);
+  fclose(fd);
 
-  read_wave_fd(fd, dest, sz);
-
-  if(fd != stdin)
-  {
-    fclose(fd);
-  }
+  return samples;
 }
 
 /*********************************************************************/
 
-static void extract_print_features(int16_t* samples, size_t n_samples)
+static csf_float* fe_16b_16k_mono(audio_sample_t *samples, size_t n_samples, int *n_frames)
 {
-  int n_frames, n_items_in_frame;
+  int n_items_in_frame = 0;
   csf_float *feat;
-
-  n_frames = n_items_in_frame = 0;
-  feat = fe_mfcc_16k_16b_mono(samples, n_samples, &n_frames, &n_items_in_frame);
-  assert(n_frames == 49);
-  assert(n_items_in_frame == 13);
+  feat = fe_mfcc_16k_16b_mono(samples, n_samples, n_frames, &n_items_in_frame);
+  assert(n_items_in_frame == MFCC_FRAME_LEN);
   assert(feat);
 
+  return feat;
+}
+
+/*********************************************************************/
+
+static void print_features(csf_float *feat, size_t n_frames)
+{
   for(int i = 0, idx = 0; i < n_frames; i++)
   {
-    for(int k = 0; k < n_items_in_frame; k++, idx++)
+    for(int k = 0; k < MFCC_FRAME_LEN; k++, idx++)
     {
       if(k)
       {
@@ -93,18 +113,45 @@ static void extract_print_features(int16_t* samples, size_t n_samples)
     }
     printf("\n");
   }
+}
 
-  free(feat);
+/*********************************************************************/
+
+static bool read_stdin(char *buf, size_t sz)
+{
+  return read_block(buf, sz, stdin);
 }
 
 /*********************************************************************/
 
 int main(int argc, const char *argv[])
 {
-  int16_t sec[16000]; // one second
-
-  read_wave(argc > 1 ? argv[1] : NULL, (char*)sec, sizeof sec);
-  extract_print_features(sec, sizeof sec / sizeof sec[0]);
+  int n_frames;
+  if(argc > 1 && strcmp(argv[1], "-"))
+  {
+    size_t sz = 0;
+    audio_sample_t *samples = read_wave(argv[1], &sz);
+    assert(sz >= RAW_RING_SZ);
+    csf_float *feat = fe_16b_16k_mono(samples, sz / sizeof *samples, &n_frames);
+    print_features(feat, n_frames);
+    free(feat);
+    free(samples);
+  }
+  else
+  {
+    char ring[RAW_RING_SZ];
+    if(read_stdin(ring, RAW_CHUNK_SZ))
+    {
+      while(read_stdin(&ring[RAW_CHUNK_SZ], RAW_CHUNK_SZ))
+      {
+        csf_float *feat = fe_16b_16k_mono((audio_sample_t*)ring, 2400, &n_frames);
+        assert(n_frames == 6);
+        print_features(&feat[MFCC_FRAME_LEN], n_frames - 1);
+        free(feat);
+        memcpy(ring, &ring[RAW_CHUNK_SZ], RAW_CHUNK_SZ);
+      }
+    }
+  }
 
   return 0;
 }

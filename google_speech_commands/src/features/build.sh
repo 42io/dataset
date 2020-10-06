@@ -1,6 +1,9 @@
 #!/bin/bash
 
 set -e
+set -u
+
+export LC_ALL=C
 
 cd "`dirname "${BASH_SOURCE[0]}"`"
 
@@ -83,6 +86,8 @@ EOF
 )"
 
 diff <(echo -e "${TEST}" | degrad) <(../../bin/fe test/backward_9b8a7439_nohash_3.wav | degrad)
+diff <(echo -e "${TEST}" | head -48 | tail -47 | degrad) \
+     <(cat <(head -c 1920 /dev/zero) <(tail -c -32000 test/backward_9b8a7439_nohash_3.wav) <(head -c 1280 /dev/zero) | ../../bin/fe | tail -47 | degrad)
 
 TEST="$(cat <<-EOF
   4.99021 -19.59178  11.13104   9.73182   7.31331   3.31160  -0.28622   2.36329 -12.13341  -2.31152  -1.34460  -4.21596  -5.92845
@@ -137,7 +142,9 @@ TEST="$(cat <<-EOF
 EOF
 )"
 
-diff <(echo -e "${TEST}" | degrad) <(../../bin/fe < test/four_079d1020_nohash_2.wav | degrad)
+diff <(echo -e "${TEST}" | degrad) <(../../bin/fe test/four_079d1020_nohash_2.wav | degrad)
+diff <(echo -e "${TEST}" | head -48 | tail -47 | degrad) \
+     <(cat <(head -c 1920 /dev/zero) <(tail -c -32000 test/four_079d1020_nohash_2.wav) <(head -c 1280 /dev/zero) | ../../bin/fe | tail -47 | degrad)
 
 TEST="$(cat <<-EOF
   7.21944   4.09427  16.54431   7.54369   9.17277   2.38732  -4.16329  -2.86602  -3.22723  -1.56835  -3.86308  -3.14392  -4.33814
@@ -192,7 +199,9 @@ TEST="$(cat <<-EOF
 EOF
 )"
 
-diff <(echo -e "${TEST}" | degrad) <(../../bin/fe < test/visual_195c120a_nohash_4.wav | degrad)
+diff <(echo -e "${TEST}" | degrad) <(../../bin/fe test/visual_195c120a_nohash_4.wav | degrad)
+diff <(echo -e "${TEST}" | head -48 | tail -47 | degrad) \
+     <(cat <(head -c 1920 /dev/zero) <(tail -c -32000 test/visual_195c120a_nohash_4.wav) <(head -c 1280 /dev/zero) | ../../bin/fe | tail -47 | degrad)
 
 TEST="$(cat <<-EOF
  12.91158  -7.59796   7.87403   9.90628   4.81347   6.02117  -1.01038  10.39901  -1.65729   1.43407  -4.11061  -0.54185   2.99863
@@ -247,7 +256,9 @@ TEST="$(cat <<-EOF
 EOF
 )"
 
-diff <(echo -e "${TEST}" | degrad) <(../../bin/fe < test/five_01648c51_nohash_0.wav | degrad)
+diff <(echo -e "${TEST}" | degrad) <(../../bin/fe test/five_01648c51_nohash_0.wav | degrad)
+diff <(echo -e "${TEST}" | head -48 | tail -47 | degrad) \
+     <(cat <(head -c 1920 /dev/zero) <(tail -c -32000 test/five_01648c51_nohash_0.wav) <(head -c 1280 /dev/zero) | ../../bin/fe | tail -47 | degrad)
 
 TEST="$(cat <<-EOF
  11.97980  -1.81050   4.03155  -0.93838  -1.60749  10.97200  -6.99220   4.10830 -10.82180   7.42327 -10.97298   5.80736  -0.97937
@@ -302,6 +313,8 @@ TEST="$(cat <<-EOF
 EOF
 )"
 
-diff <(echo -e "${TEST}" | degrad) <(../../bin/fe < test/house_37bd115d_nohash_0.wav | degrad)
+diff <(echo -e "${TEST}" | degrad) <(../../bin/fe test/house_37bd115d_nohash_0.wav | degrad)
+diff <(echo -e "${TEST}" | head -48 | tail -47 | degrad) \
+     <(cat <(head -c 1920 /dev/zero) <(tail -c -32000 test/house_37bd115d_nohash_0.wav) <(head -c 1280 /dev/zero) | ../../bin/fe | tail -47 | degrad)
 
 echo "Features extractor build OK!"

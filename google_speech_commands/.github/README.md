@@ -1,3 +1,9 @@
+### Feature Extraction
+
+    ~$ src/features/build.sh
+    ~$ bin/fe src/features/test/four_079d1020_nohash_2.wav
+    ~$ arecord -f S16_LE -c1 -r16000 -t raw | bin/fe
+
 ### Download (0up.lrz | 0-9up.lrz)
 
     ~$ wget https://github.com/42io/dataset/releases/download/v1.0/0up.lrz
