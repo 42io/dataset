@@ -86,10 +86,10 @@ static audio_sample_t* read_wave(const char *path, size_t *sz)
 
 /*********************************************************************/
 
-static csf_float* fe_16b_16k_mono(audio_sample_t *samples, size_t n_samples, int *n_frames)
+static float* fe_16b_16k_mono(audio_sample_t *samples, size_t n_samples, int *n_frames)
 {
   int n_items_in_frame = 0;
-  csf_float *feat;
+  float *feat;
   feat = fe_mfcc_16k_16b_mono(samples, n_samples, n_frames, &n_items_in_frame);
   assert(n_items_in_frame == MFCC_FRAME_LEN);
   assert(feat);
@@ -99,7 +99,7 @@ static csf_float* fe_16b_16k_mono(audio_sample_t *samples, size_t n_samples, int
 
 /*********************************************************************/
 
-static void print_features(csf_float *feat, size_t n_frames)
+static void print_features(float *feat, size_t n_frames)
 {
   for(int i = 0, idx = 0; i < n_frames; i++)
   {
@@ -126,13 +126,15 @@ static bool read_stdin(char *buf, size_t sz)
 
 int main(int argc, const char *argv[])
 {
+  fe_mfcc_init();
+
   int n_frames;
   if(argc > 1 && strcmp(argv[1], "-"))
   {
     size_t sz = 0;
     audio_sample_t *samples = read_wave(argv[1], &sz);
     assert(sz >= RAW_RING_SZ);
-    csf_float *feat = fe_16b_16k_mono(samples, sz / sizeof *samples, &n_frames);
+    float *feat = fe_16b_16k_mono(samples, sz / sizeof *samples, &n_frames);
     print_features(feat, n_frames);
     free(feat);
     free(samples);
@@ -144,7 +146,7 @@ int main(int argc, const char *argv[])
     {
       while(read_stdin(&ring[RAW_CHUNK_SZ], RAW_CHUNK_SZ))
       {
-        csf_float *feat = fe_16b_16k_mono((audio_sample_t*)ring, 2400, &n_frames);
+        float *feat = fe_16b_16k_mono((audio_sample_t*)ring, 2400, &n_frames);
         assert(n_frames == 6);
         print_features(&feat[MFCC_FRAME_LEN], n_frames - 1);
         free(feat);
@@ -152,6 +154,8 @@ int main(int argc, const char *argv[])
       }
     }
   }
+
+  fe_mfcc_free();
 
   return 0;
 }

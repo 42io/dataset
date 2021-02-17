@@ -1,5 +1,6 @@
 #include "fe.h"
 #include "c_speech_features.h"
+#include "c_speech_features_fast.h"
 #include <stddef.h>
 #include <stdbool.h>
 
@@ -30,6 +31,22 @@ csf_float* fe_mfcc_16k_16b_mono(short *aBuffer, int aBufferSize, int* n_frames, 
                        NULL, &mfcc);
 
   return mfcc;
+}
+
+/*********************************************************************/
+
+void fe_mfcc_init(void)
+{
+  csf_magspec_init(NUM_FFT);
+  csf_mfcc_init(NUM_CEP, NUM_FILTERS);
+}
+
+/*********************************************************************/
+
+void fe_mfcc_free(void)
+{
+  csf_mfcc_free();
+  csf_magspec_free();
 }
 
 /*********************************************************************/

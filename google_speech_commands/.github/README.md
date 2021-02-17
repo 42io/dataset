@@ -4,30 +4,34 @@
     ~$ bin/fe src/features/test/four_079d1020_nohash_2.wav
     ~$ arecord -f S16_LE -c1 -r16000 -t raw | bin/fe
 
-### Download (0up.lrz | 0-9up.lrz)
+### Download features for words 0-9
 
-    ~$ wget https://github.com/42io/dataset/releases/download/v1.0/0up.lrz
-    ~$ lrunzip 0up.lrz -o 0up.data # zero, unknown, public
-    ~$ md5sum 0up.data # 71d11b22bf3b677a05dc114612714b84
+    ~$ apt install gcc lrzip wget
+    ~$ wget https://github.com/42io/dataset/releases/download/v1.0/0-9up.lrz
+    ~$ lrunzip 0-9up.lrz -o 0-9up.data # md5 87fc2460c7b6cd3dcca6807e9de78833
 
 ### NumPy example
 
-Slow.
+Slow:
 
     import numpy as np
-    data = np.loadtxt('0up.data')
-    x_train = data[data[:,0] < 3][:,1:]
-    y_train = data[data[:,0] < 3][:,0]
-    x_test  = data[data[:,0] > 5][:,1:]
-    y_test  = data[data[:,0] > 5][:,0] - 6
+    data = np.loadtxt('0-9up.data', dtype='float32')
+    x_train = data[data[:,0] < 12][:,1:]
+    y_train = data[data[:,0] < 12][:,0]
+    x_test  = data[data[:,0] > 23][:,1:]
+    y_test  = data[data[:,0] > 23][:,0] - 24
     x_valid = data[len(x_train):-len(x_test)][:,1:]
-    y_valid = data[len(y_train):-len(y_test)][:,0] - 3
-    np.save('0up',(x_train, y_train, x_test, y_test, x_valid, y_valid))
+    y_valid = data[len(y_train):-len(y_test)][:,0] - 12
+    np.savez_compressed('0-9up.npz',
+                        x_train = x_train, y_train = y_train,
+                        x_test  = x_test,  y_test  = y_test,
+                        x_valid = x_valid, y_valid = y_valid)
 
-Fast.
+Fast:
 
     import numpy as np
-    (x_train, y_train, x_test, y_test, x_valid, y_valid) = np.load('0up.npy', allow_pickle=True)
+    dset = np.load('0-9up.npz') # md5 54821a74684e7bbb9b3acd853960d9cd
+    print(dset.files)
 
 ### Custom Words
 

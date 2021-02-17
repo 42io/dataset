@@ -9,13 +9,21 @@ cd "`dirname "${BASH_SOURCE[0]}"`"
 
 mkdir -p ../../bin
 
-gcc -Werror -Wall -Wextra -Wpedantic -Wno-sign-compare \
+gcc -Werror -Wall -Wextra -Wpedantic -Wno-sign-compare -Wno-maybe-uninitialized \
     -I. -I../../lib/c_speech_features-0.4.8/ \
     -I../../lib/c_speech_features-0.4.8/kiss_fft130/ \
-    ../../lib/c_speech_features-0.4.8/c_speech_features.c \
+    fast/mfcc.c \
+    ../../lib/c_speech_features-0.4.8/slow/fbank.c \
+    ../../lib/c_speech_features-0.4.8/slow/logfbank.c \
+    ../../lib/c_speech_features-0.4.8/slow/lifter.c \
+    ../../lib/c_speech_features-0.4.8/slow/get_filterbanks.c \
+    ../../lib/c_speech_features-0.4.8/slow/framesig.c \
+    ../../lib/c_speech_features-0.4.8/slow/preemphasis.c \
+    fast/magspec.c \
+    ../../lib/c_speech_features-0.4.8/slow/powspec.c \
     ../../lib/c_speech_features-0.4.8/kiss_fft130/kiss_fft.c \
     ../../lib/c_speech_features-0.4.8/kiss_fft130/tools/kiss_fftr.c \
-    -o ../../bin/fe main.c fe.c -lm
+    -o ../../bin/fe main.c fe.c weak.c -lm
 
 # pymfcc() { python -c '
 # import sys
